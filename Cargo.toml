@@ -1,12 +1,12 @@
 [package]
 name = "auto_update"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 hyper = { version = "0.14", features = ["full"] }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1.25.0", features = ["full"] }
 hyper-tls = "0.5.0"
 serde_json = "1.0"

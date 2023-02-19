@@ -11,7 +11,7 @@ This could be a possible main entry point or better said a way to call the funct
 async fn main() {
     let os = "linux".to_string();
     let architecture = "arm64".to_string();
-    let application_name = "my_test_application"
+    let application_name = "my_test_application".to_string();
     let url: String = "https://api.github.com/repos/cli/cli/releases".to_string();
     let install_path = "/Users/michael/Development/tests/auto_update".to_string();
     check_for_update(url, os, architecture, install_path, application_name).await;
