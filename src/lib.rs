@@ -1,5 +1,7 @@
-use std::{error::Error, fs::File, io::Write};
+use std::{error::Error, fs::{File, self}, io::{Write, Read}, os::unix::prelude::OpenOptionsExt};
+use tar::Archive;
 
+use flate2::read::GzDecoder;
 use hyper::{Body, Client, Request, Response, StatusCode};
 use hyper_tls::HttpsConnector;
 use serde_json::Value;
@@ -42,15 +44,20 @@ pub async fn check_for_update(uri: String) -> Result<bool, Box<dyn Error>> {
     return Ok(false);
 }
 
-fn numerate_version(original: &str) -> String {
+fn numerate_version(original: &str) -> f64 {
     let mut version_vec = vec![];
-
+    let mut first_point = false;
     for x in original.chars() {
-        if x.is_numeric() {
+        if x.is_digit(10) {
+            version_vec.push(x.to_string());
+        }
+        if x.to_string().as_str() == "." && first_point == false {
+            first_point = true;
             version_vec.push(x.to_string());
         }
     }
-    return version_vec.concat();
+    let y = version_vec.concat();
+    return y.parse::<f64>().unwrap();
 }
 
 async fn response_to_body(resp: Response<Body>) -> Result<String, Box<dyn Error>> {
@@ -59,15 +66,22 @@ async fn response_to_body(resp: Response<Body>) -> Result<String, Box<dyn Error>
     Ok(string)
 }
 
+fn normalize_dir_path(x: String) -> String{
+    if !x.ends_with("/"){
+        return format!("{}/", x);
+    }
+    return x;
+}
+
 pub async fn download_install_update(
     uri: String,
     used_os: String,
     architecture: String,
-    install_path: String,
+    mut install_path: String,
     application_name: String,
 
 ) {
-    let url = uri.parse::<hyper::Uri>().unwrap();
+    install_path = normalize_dir_path(install_path);
     let array = fetch_assets(uri).await.unwrap();
     if array.len() > 0 {
         let version = array[0]["tag_name"].as_str().unwrap();
@@ -83,6 +97,7 @@ pub async fn download_install_update(
                     // check if the asset name contains the correct os and architecture
                     if asset_name.contains(used_os.to_lowercase().as_str())
                         && asset_name.contains(architecture.to_lowercase().as_str())
+                        && asset_name.contains("tar.gz")
                     {
                         let https = HttpsConnector::new();
                         let client = Client::builder().build::<_, hyper::Body>(https);
@@ -103,7 +118,8 @@ pub async fn download_install_update(
                                 .body(Body::empty())
                                 .unwrap();
                             let res = client.request(request).await.unwrap();
-                            respone_to_file(res, install_path, application_name).await;
+                            unpack_file(res, install_path).await.unwrap();
+                            //respone_to_file(res, install_path, application_name).await;
                             return;
                         }
                     }
@@ -111,6 +127,15 @@ pub async fn download_install_update(
             }
         }
     }
+}
+
+async fn unpack_file(resp: Response<Body>, install_path: String) -> Result<(), Box<dyn Error>> {
+    let body_bytes = hyper::body::to_bytes(resp.into_body()).await.unwrap();
+    let c: &[u8] = &body_bytes;
+    let tar = GzDecoder::new(c);
+    let mut archive = Archive::new(tar);
+    archive.unpack(install_path).unwrap();
+    Ok(())
 }
 
 async fn respone_to_file(resp: Response<Body>, install_path: String, filename: String) {

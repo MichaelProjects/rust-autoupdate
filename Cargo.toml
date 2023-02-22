@@ -2,7 +2,7 @@
 name = "auto_update"
 version = "0.1.1"
 edition = "2021"
-
+license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -10,3 +10,9 @@ hyper = { version = "0.14", features = ["full"] }
 tokio = { version = "1.25.0", features = ["full"] }
 hyper-tls = "0.5.0"
 serde_json = "1.0"
+flate2 = "1.0.25"
+tar = "0.4.38"
+
+[[example]]
+name = "macos"
+path = "example/macos.rs"
